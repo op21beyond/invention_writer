@@ -194,7 +194,8 @@ async def node_agent0_structurer(state: PatentWorkflowState) -> dict:
 
     return {
         "anchor_document": anchor,
-        "phase": "discussion",
+        # 첫 「다음 단계」에서 route → agent1_draft 가 실행되도록 discussion 이전 단계로 둔다.
+        "phase": "draft",
         "discussion_turn": "expander",
         "conversation_log": _append_message(
             state,
@@ -337,6 +338,9 @@ async def node_agent1(state: PatentWorkflowState) -> dict:
             message_detail=dev_detail,
         ),
     }
+    if phase == "draft":
+        patch["phase"] = "discussion"
+        patch["discussion_turn"] = "expander"
     if phase == "discussion":
         hist = list(state.get("discussion_feedback_history") or [])
         if hist:

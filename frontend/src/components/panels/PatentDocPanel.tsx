@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { savePatentExport, type PatentExportFormat } from "../../lib/patentExport";
 import { useWorkflowStore } from "../../stores/workflowStore";
@@ -32,6 +32,8 @@ function formatClaims(doc: Record<string, unknown>): string {
   }
   return parts.join("\n\n");
 }
+
+const SHARED_DRAFT_SECTION_LABEL = "공유 작업 문서 (draft)";
 
 const SECTIONS: Array<{ label: string; getHtml: (d: Record<string, unknown>) => string }> = [
   {
@@ -79,13 +81,20 @@ const SECTIONS: Array<{ label: string; getHtml: (d: Record<string, unknown>) => 
     getHtml: (d) => str(d.abstract),
   },
   {
-    label: "공유 작업 문서 (draft)",
+    label: SHARED_DRAFT_SECTION_LABEL,
     getHtml: (d) => str(d.draft),
   },
 ];
 
+/** 가운데 패널(공유 작업 문서)과 동일 텍스트면 발명신고서 카드에서 draft 란을 숨긴다. */
+function textEquivalentForUi(a: string, b: string): boolean {
+  const n = (t: string) => t.replace(/\r\n/g, "\n").trim();
+  return n(a) === n(b);
+}
+
 export function PatentDocPanel() {
-  const { currentSession } = useWorkflowStore();
+  const { currentSession, sharedDocumentDraft } = useWorkflowStore();
+  const patentHelpTooltipId = useId();
   const [exportFormat, setExportFormat] = useState<PatentExportFormat>("markdown");
   const [exportBusy, setExportBusy] = useState(false);
   const patentRaw = currentSession?.state?.patent_document;
@@ -97,14 +106,18 @@ export function PatentDocPanel() {
       ? (patentRaw as Record<string, unknown>)
       : ({} as Record<string, unknown>);
 
-  const rows = useMemo(
-    () =>
-      SECTIONS.map(({ label, getHtml }) => ({
-        label,
-        text: getHtml(patentDocument),
-      })),
-    [patentDocument, patentRaw],
-  );
+  const rows = useMemo(() => {
+    const hideDuplicateDraft = textEquivalentForUi(str(patentDocument.draft), sharedDocumentDraft);
+    return SECTIONS.filter((sec) => {
+      if (sec.label === SHARED_DRAFT_SECTION_LABEL && hideDuplicateDraft) {
+        return false;
+      }
+      return true;
+    }).map(({ label, getHtml }) => ({
+      label,
+      text: getHtml(patentDocument),
+    }));
+  }, [patentDocument, patentRaw, sharedDocumentDraft]);
 
   const hasPatentPayload = useMemo(() => {
     if (!patentRaw || typeof patentRaw !== "object" || Array.isArray(patentRaw)) {
@@ -128,7 +141,29 @@ export function PatentDocPanel() {
   return (
     <section className="panel">
       <div className="panel-heading-row">
-        <h2>발명신고서</h2>
+        <div className="panel-title-with-help">
+          <h2>발명신고서</h2>
+          <span className="patent-help-wrap">
+            <button
+              type="button"
+              className="patent-help-icon"
+              aria-label="발명신고서 패널 안내"
+              aria-describedby={patentHelpTooltipId}
+            >
+              ?
+            </button>
+            <div
+              className="patent-help-popup"
+              id={patentHelpTooltipId}
+              role="tooltip"
+            >
+              아래 필드는 서버 상태의 영문 필드 명(
+              <code className="inline-code-snippet">patent_document</code>)과 매핑됩니다. 채팅의 Agent&nbsp;1 상세
+              보기(JSON)와 동일한 초안입니다. Markdown·Word는 저장 위치를 고르고, PDF는 인쇄 대화상자에서
+              &quot;PDF로 저장&quot;을 선택하세요.
+            </div>
+          </span>
+        </div>
         <div className="patent-export-bar" role="group" aria-label="발명신고서 파일 내보내기">
           <label className="patent-export-label">
             형식
@@ -154,11 +189,6 @@ export function PatentDocPanel() {
           </button>
         </div>
       </div>
-      <p className="panel-patent-hint">
-        아래 필드는 서버 상태의 영문 필드 명(<code className="inline-code-snippet">patent_document</code>)과
-        매핑됩니다. 채팅의 Agent&nbsp;1 상세 보기(JSON)와 동일한 초안입니다. Markdown·Word는 저장 위치를 고르고, PDF는
-        인쇄 대화상자에서 &quot;PDF로 저장&quot;을 선택하세요.
-      </p>
       <div className="section-list">
         {rows.map(({ label, text }) => (
           <article className="section-card section-card--patent-field" key={label}>

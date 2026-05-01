@@ -91,6 +91,17 @@ type WindowWithSavePicker = Window & {
   }) => Promise<FileSystemFileHandle>;
 };
 
+function isFilePickerUserAbort(err: unknown): boolean {
+  if (err instanceof DOMException && err.name === "AbortError") {
+    return true;
+  }
+  if (typeof err === "object" && err !== null && "name" in err && (err as { name: string }).name === "AbortError") {
+    return true;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  return /aborted|AbortError/i.test(msg);
+}
+
 async function saveBlobWithFilePicker(
   blob: Blob,
   suggestedName: string,
@@ -98,13 +109,20 @@ async function saveBlobWithFilePicker(
 ): Promise<void> {
   const w = window as WindowWithSavePicker;
   if (typeof w.showSaveFilePicker === "function") {
-    const handle = await w.showSaveFilePicker({
-      suggestedName,
-      types: [{ description: "내보내기", accept }],
-    });
-    const stream = await handle.createWritable();
-    await stream.write(await blob.arrayBuffer());
-    await stream.close();
+    try {
+      const handle = await w.showSaveFilePicker({
+        suggestedName,
+        types: [{ description: "내보내기", accept }],
+      });
+      const stream = await handle.createWritable();
+      await stream.write(await blob.arrayBuffer());
+      await stream.close();
+    } catch (e) {
+      if (isFilePickerUserAbort(e)) {
+        return;
+      }
+      throw e;
+    }
     return;
   }
   const a = document.createElement("a");

@@ -538,6 +538,61 @@ button.workflow-step.workflow-step--navigable:focus-visible {
   margin-bottom: 4px;
 }
 
+.panel-title-with-help {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.patent-help-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.patent-help-icon {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.patent-help-icon:hover,
+.patent-help-icon:focus-visible {
+  color: var(--text);
+  border-color: rgba(31, 26, 21, 0.28);
+  outline: none;
+}
+
+.patent-help-popup {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: min(340px, calc(100vw - 48px));
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 8px 28px rgba(15, 12, 9, 0.12);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.patent-help-wrap:hover .patent-help-popup,
+.patent-help-wrap:focus-within .patent-help-popup {
+  display: block;
+}
+
 .patent-export-bar {
   display: flex;
   flex-wrap: wrap;
@@ -614,13 +669,6 @@ button.workflow-step.workflow-step--navigable:focus-visible {
   font-size: 13px;
   line-height: 1.52;
   color: var(--text);
-}
-
-.panel-patent-hint {
-  margin: 0 0 12px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--muted);
 }
 
 .inline-code-snippet {
