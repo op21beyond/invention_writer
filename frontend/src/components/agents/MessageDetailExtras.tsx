@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { detailRecordToMarkdown, editTextToMarkdownPreview } from "../../lib/detailMarkdownPreview";
 import {
   findDiscussionFeedbackEntry,
+  formatDiscussionRosterMarkdown,
+  meritLabelKr,
   patentAfterFromFeedbackEntry,
   rosterDiscussionRows,
 } from "../../lib/discussionFeedbackUi";
@@ -99,8 +101,10 @@ export function MessageDetailExtras({ detail, threadId }: MessageDetailExtrasPro
     discussionRoundCompleted !== null &&
     discussionEntry !== null;
 
-  const rejectedDiscussionRows = useDiscussionTriple ? discussionRoster.filter((r) => r.status === "rejected") : [];
-  const acceptedDiscussionRows = useDiscussionTriple ? discussionRoster.filter((r) => r.status === "accepted") : [];
+  const rejectedDiscussionRows = useDiscussionTriple ? discussionRoster.filter((r) => r.merit_score === 0) : [];
+  const acceptedDiscussionRows = useDiscussionTriple
+    ? discussionRoster.filter((r) => r.merit_score === 1 || r.merit_score === 2)
+    : [];
 
   const discussionPatentSnapshot = useMemo(() => {
     const fromDetail =
@@ -119,6 +123,14 @@ export function MessageDetailExtras({ detail, threadId }: MessageDetailExtrasPro
     }
     return editTextToMarkdownPreview(stringifyValue(discussionPatentSnapshot), "developer_patent");
   }, [discussionPatentSnapshot]);
+
+  const developerPatentEditMarkdown = useMemo(() => {
+    const base = editTextToMarkdownPreview(editText, kind);
+    if (!useDiscussionTriple || discussionRoster.length === 0) {
+      return base;
+    }
+    return `${base}\n\n---\n\n${formatDiscussionRosterMarkdown(discussionRoster)}`;
+  }, [editText, kind, useDiscussionTriple, discussionRoster]);
 
   const meta = useMemo(() => {
     if (kind === "expander") {
@@ -274,7 +286,7 @@ export function MessageDetailExtras({ detail, threadId }: MessageDetailExtrasPro
         ) : (
           <MarkdownPreview
             className="detail-edit-textarea--body"
-            markdown={editTextToMarkdownPreview(editText, kind)}
+            markdown={developerPatentEditMarkdown}
           />
         )}
       </>
@@ -435,7 +447,7 @@ export function MessageDetailExtras({ detail, threadId }: MessageDetailExtrasPro
             className={`discussion-detail-tab ${discussPanel === "accepted" ? "discussion-detail-tab--active" : ""}`}
             onClick={() => setDiscussPanel("accepted")}
           >
-            채택보기
+            유지·채택
           </button>
         ) : null}
       </div>
@@ -463,29 +475,37 @@ export function MessageDetailExtras({ detail, threadId }: MessageDetailExtrasPro
                     <tr>
                       <th>ID</th>
                       <th>유형</th>
-                      <th>판정</th>
-                      <th>거절 사유</th>
+                      <th>적합도</th>
+                      <th>사유·보완 메모</th>
                       <th>요지</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {discussionRoster.map((row) => (
-                      <tr key={row.suggestion_id}>
-                        <td>
-                          <code className="discussion-code">{row.suggestion_id}</code>
-                        </td>
-                        <td>{row.suggestionType || "—"}</td>
-                        <td>
-                          {row.status === "accepted" ? "채택" : row.status === "rejected" ? "거절" : "미선택"}
-                        </td>
-                        <td className="discussion-td-reason">
-                          {row.status === "rejected" && row.reason.trim() ? row.reason : "—"}
-                        </td>
-                        <td className="discussion-td-content">
-                          {row.content.length > 500 ? `${row.content.slice(0, 500)}…` : row.content || "—"}
-                        </td>
-                      </tr>
-                    ))}
+                    {discussionRoster.map((row) => {
+                      const label =
+                        row.merit_score === 2
+                          ? "2 · 완전 적합"
+                          : row.merit_score === 1
+                            ? "1 · 유지·보완"
+                            : "0 · 배제";
+                      const reasonCell =
+                        row.merit_score === 0 || row.merit_score === 1
+                          ? row.reason.trim() || "—"
+                          : "—";
+                      return (
+                        <tr key={row.suggestion_id}>
+                          <td>
+                            <code className="discussion-code">{row.suggestion_id}</code>
+                          </td>
+                          <td>{row.suggestionType || "—"}</td>
+                          <td>{label}</td>
+                          <td className="discussion-td-reason">{reasonCell}</td>
+                          <td className="discussion-td-content">
+                            {row.content.length > 500 ? `${row.content.slice(0, 500)}…` : row.content || "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -531,11 +551,21 @@ export function MessageDetailExtras({ detail, threadId }: MessageDetailExtrasPro
               <li key={row.suggestion_id} className="discussion-report-card discussion-report-card--accepted">
                 <div className="discussion-report-head">
                   <code className="discussion-code">{row.suggestion_id}</code>
+                  <span className="discussion-report-merit">{meritLabelKr(row.merit_score)}</span>
                   {row.suggestionType ? (
                     <span className="discussion-report-type">{row.suggestionType}</span>
                   ) : null}
                 </div>
                 <p className="discussion-report-content">{row.content || "—"}</p>
+                {row.merit_score === 1 ? (
+                  row.reason.trim() ? (
+                    <p className="discussion-report-reason">
+                      <strong>보완·리스크 메모</strong> {row.reason}
+                    </p>
+                  ) : (
+                    <p className="discussion-muted">보완 메모가 비어 있습니다.</p>
+                  )
+                ) : null}
               </li>
             ))}
           </ul>
@@ -573,7 +603,7 @@ export function MessageDetailExtras({ detail, threadId }: MessageDetailExtrasPro
               type="button"
               onClick={() => openDiscussPanel("accepted")}
             >
-              채택보기
+              유지·채택
             </button>
           ) : null}
         </div>

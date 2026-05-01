@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
+import { savePatentExport, type PatentExportFormat } from "../../lib/patentExport";
 import { useWorkflowStore } from "../../stores/workflowStore";
 
 function str(v: unknown): string {
@@ -75,19 +76,18 @@ const SECTIONS: Array<{ label: string; getHtml: (d: Record<string, unknown>) => 
   },
   {
     label: "요약서",
-    getHtml: (d) => {
-      const summary = str(d.abstract);
-      const draft = str(d.draft);
-      if (summary && draft) {
-        return `${summary}\n\n---\n\n**공유/working draft**\n\n${draft}`;
-      }
-      return summary || draft;
-    },
+    getHtml: (d) => str(d.abstract),
+  },
+  {
+    label: "공유 작업 문서 (draft)",
+    getHtml: (d) => str(d.draft),
   },
 ];
 
 export function PatentDocPanel() {
   const { currentSession } = useWorkflowStore();
+  const [exportFormat, setExportFormat] = useState<PatentExportFormat>("markdown");
+  const [exportBusy, setExportBusy] = useState(false);
   const patentRaw = currentSession?.state?.patent_document;
   const patentDocument =
     patentRaw !== null &&
@@ -106,12 +106,58 @@ export function PatentDocPanel() {
     [patentDocument, patentRaw],
   );
 
+  const hasPatentPayload = useMemo(() => {
+    if (!patentRaw || typeof patentRaw !== "object" || Array.isArray(patentRaw)) {
+      return false;
+    }
+    return rows.some((r) => (r.text || "").trim().length > 0);
+  }, [patentRaw, rows]);
+
+  const handleExport = () => {
+    if (!hasPatentPayload) {
+      window.alert("저장할 발명신고서 내용이 없습니다.");
+      return;
+    }
+    setExportBusy(true);
+    const base = (currentSession?.project_name || "patent-draft").trim() || "patent-draft";
+    void savePatentExport(patentDocument, exportFormat, base)
+      .catch((e) => window.alert(e instanceof Error ? e.message : "내보내기에 실패했습니다."))
+      .finally(() => setExportBusy(false));
+  };
+
   return (
     <section className="panel">
-      <h2>발명신고서</h2>
+      <div className="panel-heading-row">
+        <h2>발명신고서</h2>
+        <div className="patent-export-bar" role="group" aria-label="발명신고서 파일 내보내기">
+          <label className="patent-export-label">
+            형식
+            <select
+              className="patent-export-select"
+              value={exportFormat}
+              onChange={(e) => setExportFormat(e.target.value as PatentExportFormat)}
+              disabled={exportBusy}
+            >
+              <option value="markdown">Markdown (.md)</option>
+              <option value="docx">Word (.docx)</option>
+              <option value="pdf">PDF (인쇄)</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="btn btn-primary patent-export-btn"
+            disabled={exportBusy}
+            onClick={handleExport}
+            title="저장 위치는 브라우저 파일 대화상자에서 선택합니다. PDF는 인쇄 창에서 PDF로 저장하세요."
+          >
+            {exportBusy ? "처리 중…" : "다른 이름으로 저장…"}
+          </button>
+        </div>
+      </div>
       <p className="panel-patent-hint">
         아래 필드는 서버 상태의 영문 필드 명(<code className="inline-code-snippet">patent_document</code>)과
-        매핑됩니다. 채팅의 Agent&nbsp;1 상세 보기(JSON)와 동일한 초안입니다.
+        매핑됩니다. 채팅의 Agent&nbsp;1 상세 보기(JSON)와 동일한 초안입니다. Markdown·Word는 저장 위치를 고르고, PDF는
+        인쇄 대화상자에서 &quot;PDF로 저장&quot;을 선택하세요.
       </p>
       <div className="section-list">
         {rows.map(({ label, text }) => (

@@ -81,7 +81,7 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
         const sid = suggestionLocalId(s, i);
         keep.add(sid);
         if (!next[sid]) {
-          next[sid] = { status: "skipped", reason: "" };
+          next[sid] = { merit_score: 1, reason: "" };
         }
       });
       for (const k of Object.keys(next)) {
@@ -93,7 +93,7 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
     }),
   setDiscussionDecisionCell: (id, patch) =>
     set((state) => {
-      const prev = state.discussionDecisionById[id] ?? { status: "skipped", reason: "" };
+      const prev = state.discussionDecisionById[id] ?? { merit_score: 1, reason: "" };
       return {
         discussionDecisionById: {
           ...state.discussionDecisionById,

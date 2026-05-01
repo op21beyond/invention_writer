@@ -1,9 +1,65 @@
+import type { MeritScore } from "./discussionDecisions";
+
 export interface EnrichedDiscussionRow {
   suggestion_id: string;
-  status: "accepted" | "rejected" | "skipped";
+  merit_score: MeritScore;
   reason: string;
   suggestionType: string;
   content: string;
+}
+
+function parseMeritScore(raw: unknown): MeritScore | null {
+  if (raw === 0 || raw === 1 || raw === 2) {
+    return raw;
+  }
+  if (raw === "0" || raw === "1" || raw === "2") {
+    return Number(raw) as MeritScore;
+  }
+  return null;
+}
+
+function normalizeStatusToMerit(
+  raw: unknown,
+): MeritScore {
+  const s = String(raw ?? "skipped")
+    .trim()
+    .toLowerCase();
+  if (s === "accepted") {
+    return 2;
+  }
+  if (s === "rejected") {
+    return 0;
+  }
+  return 1;
+}
+
+/** UI·표 헤더용 */
+export function meritLabelKr(merit: MeritScore): string {
+  if (merit === 2) {
+    return "적합(완전 채택)";
+  }
+  if (merit === 1) {
+    return "유지·보완(다툴 여지)";
+  }
+  return "부적절(배제)";
+}
+
+/** Markdown 미리보기·상세보기 부록 */
+export function formatDiscussionRosterMarkdown(rows: EnrichedDiscussionRow[]): string {
+  if (rows.length === 0) {
+    return "";
+  }
+  const lines = rows.map((r) => {
+    const label = meritLabelKr(r.merit_score);
+    const reason = r.reason.trim();
+    const reasonPart =
+      r.merit_score === 0 || r.merit_score === 1
+        ? reason || "_사유·보완 메모 없음_"
+        : "—";
+    const gist = r.content.length > 400 ? `${r.content.slice(0, 400)}…` : r.content || "—";
+    return `- **${r.suggestion_id}** (${r.suggestionType || "유형 미상"}) · **${label}**\n  - 사유·보완: ${reasonPart}\n  - 요지: ${gist}`;
+  });
+  return "## 제안별 적합도 판정 (이 라운드)\n\n" + lines.join("\n\n");
 }
 
 export function findDiscussionFeedbackEntry(history: unknown, round: number | null): Record<string, unknown> | null {
@@ -22,26 +78,13 @@ export function findDiscussionFeedbackEntry(history: unknown, round: number | nu
   return null;
 }
 
-function normalizeStatus(raw: unknown): EnrichedDiscussionRow["status"] {
-  const s = String(raw ?? "skipped")
-    .trim()
-    .toLowerCase();
-  if (s === "accepted") {
-    return "accepted";
-  }
-  if (s === "rejected") {
-    return "rejected";
-  }
-  return "skipped";
-}
-
-/** 스냅샷 순서대로 전 제안과 판정(없으면 skipped) 결합 — 상세표·탭 분리용 */
+/** 스냅샷 순서대로 전 제안과 판정 결합 — 상세표·탭 분리용 */
 export function rosterDiscussionRows(entry: Record<string, unknown>): EnrichedDiscussionRow[] {
   const snap = Array.isArray(entry.expander_suggestions_snapshot)
     ? (entry.expander_suggestions_snapshot as Array<Record<string, unknown>>)
     : [];
 
-  const decMap = new Map<string, { status: EnrichedDiscussionRow["status"]; reason: string }>();
+  const decMap = new Map<string, { merit_score: MeritScore; reason: string }>();
   const rawDecisions = Array.isArray(entry.discussion_decisions) ? entry.discussion_decisions : [];
   for (const raw of rawDecisions) {
     if (!raw || typeof raw !== "object") {
@@ -52,8 +95,9 @@ export function rosterDiscussionRows(entry: Record<string, unknown>): EnrichedDi
     if (!id) {
       continue;
     }
+    const m = parseMeritScore(d.merit_score) ?? normalizeStatusToMerit(d.status);
     decMap.set(id, {
-      status: normalizeStatus(d.status),
+      merit_score: m,
       reason: typeof d.reason === "string" ? d.reason : String(d.reason ?? ""),
     });
   }
@@ -63,10 +107,10 @@ export function rosterDiscussionRows(entry: Record<string, unknown>): EnrichedDi
       typeof s.id === "string" && s.id.trim()
         ? s.id.trim()
         : `s-idx-${idx}`;
-    const fb = decMap.get(suggestion_id) ?? { status: "skipped" as const, reason: "" };
+    const fb = decMap.get(suggestion_id) ?? { merit_score: 1 as MeritScore, reason: "" };
     return {
       suggestion_id,
-      status: fb.status,
+      merit_score: fb.merit_score,
       reason: fb.reason,
       suggestionType: typeof s.type === "string" ? s.type : String(s.type ?? ""),
       content: typeof s.content === "string" ? s.content : String(s.content ?? ""),

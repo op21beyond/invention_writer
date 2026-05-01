@@ -2,9 +2,11 @@ export type ResumeAction = "continue" | "approve" | "reject";
 
 export type DiscussionDecisionStatus = "accepted" | "rejected" | "skipped";
 
+/** merit_score: 2 완전 적합, 1 유지·보완, 0 배제 (구 API는 status만 올 수 있음) */
 export interface DiscussionDecisionPayload {
   suggestion_id: string;
-  status: DiscussionDecisionStatus;
+  merit_score?: 0 | 1 | 2;
+  status?: DiscussionDecisionStatus;
   reason: string;
 }
 

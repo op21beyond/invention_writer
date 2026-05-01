@@ -181,6 +181,11 @@ export function jsonValueToMarkdown(data: unknown, kind: string): string {
   return "```\n" + String(data) + "\n```";
 }
 
+/** 발명신고서 JSON → 내보내기·미리보기용 마크다운 */
+export function patentDocumentToMarkdown(doc: Record<string, unknown>): string {
+  return jsonValueToMarkdown(doc, "developer_patent");
+}
+
 export function editTextToMarkdownPreview(editText: string, kind: string): string {
   const t = editText.trim();
   if (!t) {

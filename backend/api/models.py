@@ -16,8 +16,9 @@ class StartSessionRequest(BaseModel):
 
 class DiscussionDecisionPayload(BaseModel):
     suggestion_id: str
-    status: Literal["accepted", "rejected", "skipped"] = "skipped"
     reason: str = ""
+    merit_score: Literal[0, 1, 2] | None = None
+    status: Literal["accepted", "rejected", "skipped"] | None = None
 
 
 class ResumeRequest(BaseModel):

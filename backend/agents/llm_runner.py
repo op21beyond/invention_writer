@@ -80,17 +80,25 @@ def _loads_array(t: str) -> list[Any]:
 
 def extract_json_object(text: str) -> dict[str, Any]:
     t = text.strip()
+    if not t:
+        raise ValueError("모델 응답이 비어 있어 JSON 객체를 파싱할 수 없습니다.")
     m = _JSON_FENCE.search(t)
     if m:
         t = m.group(1).strip()
+    if not t:
+        raise ValueError("코드 펜스 안에 유효한 JSON 본문이 없습니다.")
     return _loads_object(t)
 
 
 def extract_json_array(text: str) -> list[Any]:
     t = text.strip()
+    if not t:
+        raise ValueError("모델 응답이 비어 있어 JSON 배열을 파싱할 수 없습니다.")
     m = _JSON_FENCE.search(t)
     if m:
         t = m.group(1).strip()
+    if not t:
+        raise ValueError("코드 펜스 안에 유효한 JSON 본문이 없습니다.")
     return _loads_array(t)
 
 

@@ -13,6 +13,7 @@ from backend.agents.prompts.agent1 import SYSTEM_PATENT_JSON
 from backend.agents.prompts.agent2 import SYSTEM_EXPANDER_JSON
 from backend.agents.prompts.agent3 import SYSTEM_EXAMINER_JSON, SYSTEM_QUERY_REFINE
 from backend.config import get_settings
+from backend.graph.patent_section_normalize import normalize_patent_sections_after_draft_llm
 from backend.graph.state import PatentWorkflowState
 from backend.patent_search.kipris import KIPRISClient
 from backend.patent_search.query_generator import build_patent_search_queries
@@ -50,6 +51,7 @@ def _default_patent_shell() -> dict[str, Any]:
         "claims_dependent": [],
         "prior_art_comparison": "",
         "abstract": "",
+        "draft": "",
     }
 
 
@@ -220,17 +222,33 @@ def node_human_review(state: PatentWorkflowState) -> dict:
     if not isinstance(dec_raw, list):
         dec_raw = []
 
-    normalized: list[dict[str, str]] = []
+    normalized: list[dict[str, Any]] = []
     for item in dec_raw:
         if not isinstance(item, dict):
             continue
         sid = str(item.get("suggestion_id", "")).strip()
-        status = str(item.get("status", "skipped")).strip().lower()
-        if status not in ("accepted", "rejected", "skipped"):
-            status = "skipped"
         reason = str(item.get("reason", "")).strip()[:4000]
+        merit: int | None = None
+        raw_merit = item.get("merit_score")
+        if raw_merit is not None:
+            try:
+                mi = int(raw_merit)
+                if mi in (0, 1, 2):
+                    merit = mi
+            except (TypeError, ValueError):
+                merit = None
+        if merit is None:
+            status = str(item.get("status", "skipped")).strip().lower()
+            if status not in ("accepted", "rejected", "skipped"):
+                status = "skipped"
+            if status == "accepted":
+                merit = 2
+            elif status == "rejected":
+                merit = 0
+            else:
+                merit = 1
         if sid:
-            normalized.append({"suggestion_id": sid, "status": status, "reason": reason})
+            normalized.append({"suggestion_id": sid, "merit_score": merit, "reason": reason})
 
     skip_ds = bool(human_input.get("skip_discussion_to_search"))
     skip_ex_f = bool(human_input.get("skip_examination_to_finalize"))
@@ -275,12 +293,24 @@ async def node_agent1(state: PatentWorkflowState) -> dict:
         "current_patent": patent_document,
     }
     user_text = json.dumps(payload, ensure_ascii=False)
+    if phase == "draft":
+        user_text += (
+            "\n\n[초안 단계 출력 규칙] 유효한 JSON 객체 하나만 출력합니다. "
+            "공유 문서를 abstract 요약 한 칸에 넣지 말고 각 섹션 키에 분배합니다. 첫 문자는 { 입니다."
+        )
+    if phase == "discussion":
+        user_text += (
+            "\n\n[출력 규칙] 응답은 유효한 JSON 객체 하나만 출력합니다. "
+            "서문·후문·마크다운 설명 없이 첫 문자는 반드시 { 입니다."
+        )
 
     msg = f"{phase} 단계 초안을 유지했습니다."
     try:
         text = await invoke_llm_text("agent1", configs, SYSTEM_PATENT_JSON, user_text, temperature=0.35)
         data = extract_json_object(text)
         patent_document = _merge_patent(patent_document, data)
+        if phase == "draft":
+            patent_document = normalize_patent_sections_after_draft_llm(patent_document)
         msg = f"{phase} 단계 초안을 LLM으로 갱신했습니다."
     except Exception as exc:
         logger.exception("agent1 LLM failed: %s", exc)
