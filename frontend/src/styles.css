@@ -524,6 +524,45 @@ button.workflow-step.workflow-step--navigable:focus-visible {
   margin-right: -4px;
 }
 
+.chat-panel-heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  margin-bottom: 6px;
+}
+
+.chat-panel-title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.chat-history-controls {
+  flex-shrink: 0;
+}
+
+.chat-history-clear-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.35;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.chat-history-clear-btn:hover:not(:disabled) {
+  border-color: rgba(163, 51, 51, 0.45);
+  color: #8b2222;
+}
+
+.chat-history-clear-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .panel h2 {
   margin-top: 0;
   font-size: 18px;

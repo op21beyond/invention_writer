@@ -23,12 +23,17 @@
 - LangGraph **1.x**, `langgraph-checkpoint-sqlite` **AsyncSqliteSaver**, FastAPI lifespan
 - `GET /health`, `POST /sessions`, `POST /sessions/{thread_id}/start`, `POST /sessions/{thread_id}/resume`
 - 선택적: `POST /sessions/{thread_id}/cancel`, `POST /sessions/{thread_id}/navigate`, **`POST /sessions/restore_snapshot`** (폴더 스냅샷 재개)
+- `PATCH /sessions/{thread_id}/state`: `patent_document`, `conversation_log`(빈 배열 등)·기타 상태 필드 일부 수정
+
+SSE(`GET /sessions/{thread_id}/stream`): `checkpoint`, `interrupt`, `node_complete` 외 **`llm_stream_start`**, **`llm_chunk`**(LLM 토큰 청크) 이벤트.
 
 프런트엔드(요약):
 
 - 3패널(대화 · 공유 문서 · 발명신고서) **가로 스플리터**로 크기 조절, 넓이는 로컬에 저장
-- 액션바: 다음 단계, **실행 중지**, 확장 논의/심사 **조기 분기**, **이전 단계**·리본에서 매크로 단계 이동, 종료 후 주 버튼 비활성(회색)
-- 발명신고 패널은 `patent_document` 영문 필드와 매칭되어 표시
+- 액션바: 다음 단계, **실행 중지**, 확장 논의/심사 **조기 분기**, **이전 단계**·리본에서 매크로 단계 이동, 종료 후 주 버튼 비활성(회색), 진행 중 **LLM 스트림** 한 줄 표시
+- 에이전트 대화 패널: **「지난 대화 비우기」**로 서버 세션 `conversation_log` 삭제(`PATCH`)
+- 논의(Developer 검토 시) 확장 제안 **적합도 0·1·2**·거절/보완 사유 입력
+- 발명신고 패널: 필드별 표시(`abstract`/`draft` 분리)·공유 문서와 내용 동일하면 `draft` 카드 숨김·`docx` 패키지로 **Markdown/Word 저장**(파일 저장 대화상자), PDF는 브라우저 인쇄
 - **폴더 선택** 시 `session-snapshot.json`(있으면) 또는 기존 분할 JSON으로 **마지막 세션 복구** 후 서버와 동기화
 
 세부 기능·변경 순서는 [HISTORY.md](HISTORY.md)를 참고하세요.

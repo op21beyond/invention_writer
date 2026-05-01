@@ -62,6 +62,7 @@ class SessionStatePatch(BaseModel):
 
     anchor_document: dict[str, Any] | None = None
     patent_document: dict[str, Any] | None = None
+    conversation_log: list[Any] | None = None
     expander_suggestions: list[Any] | None = None
     search_queries: list[Any] | None = None
     search_results: list[Any] | None = None

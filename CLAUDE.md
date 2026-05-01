@@ -33,6 +33,7 @@
 - **Frontend**: React + TypeScript + Vite
 - **Styling**: 글로벌 CSS (`frontend/src/styles.css`). Tailwind는 미도입(필요 시 후속 도입 가능)
 - **State**: Zustand (UI·워크플로 클라이언트 상태)
+- **내보내기**: 발명신고서 Word 생성에 **`docx`** npm 패키지 사용
 - **Editor**: TipTap
 - **패키지 매니저**: 프런트는 npm(`package-lock.json` 기준); 백엔드는 pip + `requirements.txt`(uv/poetry도 가능)
 
@@ -101,6 +102,13 @@ EPO_CLIENT_SECRET=
 - **에이전트·사람 규격**: 본 파일 + `doc/prompt/…`
 - **구현 타임라인·디버깅**: `HISTORY.md` 역순(최신 상단·타임스탬프)
 - 기능/API가 바뀌면 같은 PR·작업 블록에서 위 세 종류 문서 중 해당하는 것을 함께 갱신하는 것을 권장한다.
+
+---
+
+## 구현 참고 메모 (상태·스트리밍)
+
+- **`SESSIONS` 메모리 vs 체크포인터**: API로 `PATCH .../state` 한 값(예: `conversation_log: []`)은 서버 세션 레코드에 반영된다. LangGraph **`AsyncSqliteSaver` 체크포인터**에는 과거 노드 상태가 따로 남을 수 있다. 그래프를 다시 재개하면 체크포인트 내용과 메모리가 어긋날 여지가 있으니, 「대화만 비운」뒤 이어 실행 시 동작은 검증해서 기록한다.
+- **SSE 확장 이벤트**: 플로 실행 중에만 `llm_stream_start`·`llm_chunk`가 올라온다(그래프 태스크와 동일 asyncio 컨텍스트에서 LLM 노드 호출 전제).
 
 ---
 

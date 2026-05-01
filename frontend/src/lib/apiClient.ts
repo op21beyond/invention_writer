@@ -89,6 +89,7 @@ export async function updateSettings(payload: SettingsPayload): Promise<Settings
 export type SessionStatePatchBody = Partial<{
   anchor_document: Record<string, unknown>;
   patent_document: Record<string, unknown>;
+  conversation_log: unknown[];
   expander_suggestions: unknown[];
   search_queries: unknown[];
   search_results: unknown[];

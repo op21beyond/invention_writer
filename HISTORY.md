@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-05-02 18:45 — LLM 스트리밍·초안 라우팅·논의 적합도·내보내기·대화 로그 비우기
+
+**작업 내용**:
+- **LLM SSE 스트리밍**: `invoke_llm_text`를 `astream` 기반으로 변경. 그래프 실행 중 `contextvars`로 `WorkflowRuntime.publish`에 연결해 `llm_stream_start` / `llm_chunk` 이벤트 송신. 액션바 `ActionBarLiveStream`에 실시간 청크 표시(`workflowStore`).
+- **플로 라우팅(초안 우선)**: Agent 0 종료 시 `phase`를 `draft`로 두어, 첫 「다음 단계」가 `agent1_draft`(발명신고 구조 필드 채움)를 거친 뒤 `discussion`·Expander로 이어지도록 수정. 과거에는 `phase`가 바로 `discussion`이라 `agent1_draft`가 스킵되어 `patent_document`가 `draft`에만 몰리는 현상이 있었음.
+- **초안 필드 분산**: `SYSTEM_PATENT_JSON` 초안 단계 규칙 강화, `normalize_patent_sections_after_draft_llm` 후처리, 사용자 텍스트 접미(첫 출력 `{`) 보강; `extract_*` 빈 본문 명시 오류.
+- **논의 제안 적합도 0/1/2**: `merit_score`(배제·보완 유지·완전 채택)·`discussion_decisions` 저장, Agent 1/2 프롬프트 및 `SuggestionDecisionsPanel`·상세보기 표/탭·마크다운 부록 정리.
+- **단계 이동(navigate) 400**: `navigation.py` 구조화 완료 판정을 `additional_kwargs.agent_id`·유의미한 `anchor_document`까지 인정해 직렬화 불일치 시 오류 완화. 프런트 API 에러 시 `detail` 본문을 알림에 포함.
+- **발명신고 패널**: 요약/`draft` 표 분리·가운데 공유 문서와 **`draft` 동일 시 카드 미표시**·`?` 호버 안내 툴팁·Markdown/Word(`docx`)/**PDF 인쇄** 내보내기·`showSaveFilePicker` 사용자 취소(Abort) 무알림.
+- **대화 로그 삭제**: `PATCH /sessions/{id}/state`에 `conversation_log` 허용. 채팅 패널 「지난 대화 비우기」확인 후 빈 배열 패치 및 `setCurrentSession`. (LangGraph 체크포인터 DB에는 이전 스레드 상태가 남을 수 있어, 재개 시 병합되는 경우는 후속 과제.)
+
+**변경·참조 파일(요약)**:
+`backend/agents/llm_runner.py`, `backend/runtime.py`, `backend/graph/nodes.py`, `backend/graph/patent_section_normalize.py`, `backend/graph/navigation.py`, `backend/api/models.py`, `backend/api/sessions.py`, `backend/agents/prompts/agent1.py`, `backend/agents/prompts/agent2.py`,
+`frontend/src/lib/sseClient.ts`, `frontend/src/stores/workflowStore.ts`, `frontend/src/components/human/*.tsx`, `frontend/src/components/panels/ChatPanel.tsx`, `frontend/src/components/panels/PatentDocPanel.tsx`, `frontend/src/lib/patentExport.ts`, `frontend/src/lib/apiClient.ts`, `frontend/package.json`, `frontend/src/styles.css`, `CLAUDE.md`, `README.md`, `HISTORY.md`
+
+---
+
 ## 2026-05-02 12:00 — 발명신고 패널·종료 UX·폴더 스냅샷 복구·패널 리사이즈·액션바 정리
 
 **작업 내용**:

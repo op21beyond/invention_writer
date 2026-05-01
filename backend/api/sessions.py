@@ -91,6 +91,8 @@ def patch_session_state(thread_id: str, body: SessionStatePatch):
         st["anchor_document"] = body.anchor_document
     if body.patent_document is not None:
         st["patent_document"] = body.patent_document
+    if body.conversation_log is not None:
+        st["conversation_log"] = body.conversation_log
     if body.expander_suggestions is not None:
         st["expander_suggestions"] = body.expander_suggestions
     if body.search_queries is not None:
