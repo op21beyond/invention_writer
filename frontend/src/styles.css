@@ -1574,11 +1574,13 @@ button.workflow-step.workflow-step--navigable:focus-visible {
   left: 20px;
   right: 20px;
   bottom: 16px;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 30%) minmax(0, 40%) minmax(0, 30%);
   align-items: center;
-  gap: 16px;
+  column-gap: 14px;
+  row-gap: 10px;
   padding: 14px 18px;
+  min-height: 5.5rem;
   background: rgba(31, 26, 21, 0.92);
   color: white;
   border-radius: 18px;
@@ -1588,7 +1590,110 @@ button.workflow-step.workflow-step--navigable:focus-visible {
 
 .action-bar-meta {
   min-width: 0;
-  flex: 1;
+}
+
+.action-bar-live {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  justify-self: stretch;
+  align-self: center;
+  padding: 0 10px;
+  border-left: 1px solid rgba(255, 252, 248, 0.1);
+  border-right: 1px solid rgba(255, 252, 248, 0.1);
+}
+
+.action-bar-live__inner {
+  min-width: 0;
+  width: 100%;
+}
+
+.action-bar-live__scroll {
+  max-height: 4.8em;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 3px;
+  font-size: 11.5px;
+  line-height: 1.38;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 252, 248, 0.25) transparent;
+}
+
+.action-bar-live__scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.action-bar-live__scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 252, 248, 0.22);
+  border-radius: 4px;
+}
+
+.action-bar-live__row--past {
+  margin: 0;
+  color: rgba(255, 252, 248, 0.68);
+  word-break: break-word;
+}
+
+.action-bar-live__row--latest {
+  margin: 0;
+  color: rgba(255, 250, 242, 0.96);
+  word-break: break-word;
+}
+
+.action-bar-live__row--streaming {
+  margin: 0;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 252, 248, 0.12);
+  color: rgba(200, 235, 255, 0.95);
+  font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.action-bar-live__stream-tag {
+  display: inline-block;
+  margin-right: 6px;
+  color: rgba(255, 252, 248, 0.72);
+  font-family: inherit;
+}
+
+.action-bar-live__text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255, 252, 248, 0.9);
+  word-break: break-word;
+}
+
+.action-bar-live__text--empty {
+  opacity: 0.8;
+  max-height: 4.35em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.action-bar-live__caret {
+  display: inline-block;
+  width: 5px;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: rgba(255, 214, 176, 0.92);
+  animation: action-bar-live-blink 0.85s steps(1, end) infinite;
+}
+
+@keyframes action-bar-live-blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 .action-bar-meta > strong {
@@ -1618,6 +1723,28 @@ button.workflow-step.workflow-step--navigable:focus-visible {
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+  justify-self: end;
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (max-width: 960px) {
+  .action-bar {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .action-bar-live {
+    border-left: none;
+    border-right: none;
+    padding: 8px 0;
+    border-top: 1px solid rgba(255, 252, 248, 0.12);
+    border-bottom: 1px solid rgba(255, 252, 248, 0.08);
+  }
+
+  .action-group--stack {
+    align-items: stretch;
+  }
 }
 
 .action-bar-primary-row {

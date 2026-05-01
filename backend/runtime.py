@@ -8,6 +8,7 @@ from typing import Any
 from fastapi.encoders import jsonable_encoder
 from langgraph.types import Command
 
+from backend.agents.llm_runner import pop_llm_stream_context, push_llm_stream_context
 from backend.api.session_store import SessionRecord, serialize_session, utcnow
 from backend.graph.navigation import build_navigation_state_patch
 
@@ -114,6 +115,7 @@ class WorkflowRuntime:
         runtime = self.ensure_runtime(record.thread_id)
         config = {"configurable": {"thread_id": record.thread_id}}
 
+        stream_token = push_llm_stream_context(self, record.thread_id)
         try:
             async for update in self.graph.astream(graph_input, config=config, stream_mode="updates"):
                 if "__interrupt__" in update:
@@ -187,6 +189,7 @@ class WorkflowRuntime:
                 {"message": str(exc), "recoverable": True},
             )
         finally:
+            pop_llm_stream_context(stream_token)
             runtime.running = False
 
     async def publish(self, thread_id: str, event: str, data: dict[str, Any]) -> None:

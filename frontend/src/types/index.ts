@@ -20,6 +20,16 @@ export interface NodeCompleteEventPayload {
   state_patch: Record<string, unknown>;
 }
 
+export interface LlmStreamStartPayload {
+  agent_id: string;
+}
+
+export interface LlmChunkPayload {
+  agent_id: string;
+  chunk: string;
+  accumulated_len?: number;
+}
+
 export interface CheckpointEventPayload {
   checkpoint_id: string;
   phase: string;

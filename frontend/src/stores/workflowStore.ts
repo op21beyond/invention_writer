@@ -5,6 +5,8 @@ import { mergeConversationLogsPreserveMessageDetail } from "../lib/conversationL
 import type {
   CheckpointEventPayload,
   InterruptEventPayload,
+  LlmChunkPayload,
+  LlmStreamStartPayload,
   NodeCompleteEventPayload,
   ProjectDirectorySelection,
   SessionRecord,
@@ -30,6 +32,11 @@ interface WorkflowStore {
   applyInterrupt: (payload: InterruptEventPayload) => void;
   applyNodeComplete: (payload: NodeCompleteEventPayload) => void;
   applyCheckpoint: (payload: CheckpointEventPayload) => void;
+  llmStreamAgent: string | null;
+  llmStreamText: string;
+  applyLlmStreamStart: (payload: LlmStreamStartPayload) => void;
+  applyLlmChunk: (payload: LlmChunkPayload) => void;
+  clearLlmStream: () => void;
 }
 
 export const useWorkflowStore = create<WorkflowStore>((set) => ({
@@ -41,6 +48,9 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
   streamConnected: false,
   fileSystemSupported: false,
   projectDirectory: null,
+  llmStreamAgent: null,
+  llmStreamText: "",
+  clearLlmStream: () => set({ llmStreamAgent: null, llmStreamText: "" }),
   setCurrentSession: (session) =>
     set((state) => {
       const prevLog = state.currentSession?.state?.conversation_log as unknown[] | undefined;
@@ -57,6 +67,8 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
       return {
         currentSession: sessionOut,
         sharedDocumentDraft: typeof st.raw_idea === "string" ? (st.raw_idea as string) : "",
+        llmStreamAgent: null,
+        llmStreamText: "",
       };
     }),
   setSharedDocumentDraft: (sharedDocumentDraft) => set({ sharedDocumentDraft }),
@@ -95,6 +107,8 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
   applyInterrupt: (latestInterrupt) =>
     set((state) => ({
       latestInterrupt,
+      llmStreamAgent: null,
+      llmStreamText: "",
       currentSession: state.currentSession
         ? { ...state.currentSession, status: "awaiting_human" }
         : state.currentSession,
@@ -125,6 +139,8 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
           status: "running",
         },
         sharedDocumentDraft: nextDraft,
+        llmStreamAgent: null,
+        llmStreamText: "",
         latestInterrupt:
           payload.node === "human_review" ? state.latestInterrupt : null,
       };
@@ -145,16 +161,37 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
           },
           latestInterrupt:
             payload.session.status === "completed" ? null : state.latestInterrupt,
+          llmStreamAgent: null,
+          llmStreamText: "",
         };
       }
       if (!state.currentSession) {
-        return state;
+        return { ...state, llmStreamAgent: null, llmStreamText: "" };
       }
       return {
         currentSession: {
           ...state.currentSession,
           status: payload.status ?? state.currentSession.status,
         },
+        llmStreamAgent: null,
+        llmStreamText: "",
       };
+    }),
+  applyLlmStreamStart: (payload) =>
+    set({
+      llmStreamAgent: payload.agent_id,
+      llmStreamText: "",
+    }),
+  applyLlmChunk: (payload) =>
+    set((state) => {
+      const prevAgent = state.llmStreamAgent;
+      const prevText = state.llmStreamText;
+      if (prevAgent == null) {
+        return { llmStreamAgent: payload.agent_id, llmStreamText: payload.chunk };
+      }
+      if (prevAgent !== payload.agent_id) {
+        return { llmStreamAgent: payload.agent_id, llmStreamText: payload.chunk };
+      }
+      return { llmStreamAgent: prevAgent, llmStreamText: prevText + payload.chunk };
     }),
 }));

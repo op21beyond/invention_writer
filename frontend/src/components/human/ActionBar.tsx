@@ -8,6 +8,7 @@ import type { ResumeAction } from "../../types";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useWorkflowStore } from "../../stores/workflowStore";
 
+import { ActionBarLiveStream } from "./ActionBarLiveStream";
 import { NavigateStepPicker } from "./NavigateStepPicker";
 
 type ResumeExtras = {
@@ -31,6 +32,8 @@ export function ActionBar() {
     setCurrentSession,
     latestInterrupt,
     streamConnected,
+    llmStreamAgent,
+    llmStreamText,
   } = useWorkflowStore();
   const { settings } = useSettingsStore();
   const [primaryBusy, setPrimaryBusy] = useState(false);
@@ -222,6 +225,16 @@ export function ActionBar() {
               공유 작업 문서에 내용을 넣으면 「다음 단계」로 구조화를 시작할 수 있습니다.
             </div>
           ) : null}
+        </div>
+        <div className="action-bar-live">
+          <ActionBarLiveStream
+            conversationLog={currentSession?.state?.conversation_log}
+            streamingLine={
+              llmStreamText
+                ? { agentId: llmStreamAgent ?? "", text: llmStreamText }
+                : null
+            }
+          />
         </div>
         <div className="action-group action-group--stack">
           <div className="action-bar-primary-row">

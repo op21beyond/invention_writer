@@ -21,7 +21,7 @@ def build_navigation_state_patch(target_step_index: int, state: dict[str, Any]) 
 
     log_raw = state.get("conversation_log")
     log = log_raw if isinstance(log_raw, list) else []
-    if not _has_anchor_message(log):
+    if not _structurer_completed(state, log):
         raise ValueError("structurer_must_complete_before_navigate")
 
     def _discussion_base() -> dict[str, Any]:
@@ -89,8 +89,43 @@ def build_navigation_state_patch(target_step_index: int, state: dict[str, Any]) 
     }
 
 
+def _conversation_entry_agent_id(raw: Any) -> str | None:
+    """프런트 `extractAgentFromConversationEntry` 와 같이 평면 필드와 LangChain `additional_kwargs` 를 본다."""
+    if not isinstance(raw, dict):
+        return None
+    aid = raw.get("agent_id")
+    if isinstance(aid, str) and aid.strip():
+        return aid.strip()
+    add = raw.get("additional_kwargs")
+    if isinstance(add, dict):
+        nested = add.get("agent_id")
+        if isinstance(nested, str) and nested.strip():
+            return nested.strip()
+    return None
+
+
 def _has_anchor_message(log: list[Any]) -> bool:
     for raw in log:
-        if isinstance(raw, dict) and raw.get("agent_id") == "agent0":
+        if _conversation_entry_agent_id(raw) == "agent0":
             return True
     return False
+
+
+def _has_meaningful_anchor_document(state: dict[str, Any]) -> bool:
+    anchor = state.get("anchor_document")
+    if not isinstance(anchor, dict):
+        return False
+    if str(anchor.get("summary", "")).strip():
+        return True
+    if str(anchor.get("problem_solved", "")).strip():
+        return True
+    comps = anchor.get("components")
+    if isinstance(comps, list) and len(comps) > 0:
+        return True
+    return False
+
+
+def _structurer_completed(state: dict[str, Any], log: list[Any]) -> bool:
+    if _has_meaningful_anchor_document(state):
+        return True
+    return _has_anchor_message(log)

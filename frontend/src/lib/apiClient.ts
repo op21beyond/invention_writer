@@ -17,7 +17,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    let detail = "";
+    try {
+      const errBody = (await response.json()) as { detail?: unknown };
+      const d = errBody?.detail;
+      if (typeof d === "string") {
+        detail = d;
+      } else if (Array.isArray(d) && d[0] && typeof d[0] === "object" && "msg" in d[0]) {
+        detail = String((d[0] as { msg?: string }).msg ?? "");
+      }
+    } catch {
+      /* ignore */
+    }
+    const suffix = detail ? `: ${detail}` : "";
+    throw new Error(`API request failed: ${response.status}${suffix}`);
   }
 
   return response.json() as Promise<T>;

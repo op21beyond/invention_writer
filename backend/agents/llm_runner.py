@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+from contextvars import ContextVar, Token
+from dataclasses import dataclass
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -13,6 +15,37 @@ from backend.config import get_settings
 logger = logging.getLogger(__name__)
 
 _JSON_FENCE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class LlmStreamContext:
+    """Set by WorkflowRuntime while the LangGraph coroutine runs (same asyncio task as LLM nodes)."""
+
+    runtime: Any
+    thread_id: str
+
+
+_LLM_STREAM_CTX: ContextVar[LlmStreamContext | None] = ContextVar("_LLM_STREAM_CTX", default=None)
+
+
+def push_llm_stream_context(runtime: Any, thread_id: str) -> Token:
+    return _LLM_STREAM_CTX.set(LlmStreamContext(runtime=runtime, thread_id=thread_id))
+
+
+def pop_llm_stream_context(token: Token) -> None:
+    _LLM_STREAM_CTX.reset(token)
+
+
+def _normalize_message_content(content: Any) -> str:
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, dict) and "text" in block:
+                parts.append(str(block["text"]))
+            else:
+                parts.append(str(block))
+        return "".join(parts)
+    return str(content or "")
 
 
 def _loads_object(t: str) -> dict[str, Any]:
@@ -110,19 +143,31 @@ async def invoke_llm_text(
     else:
         raise RuntimeError(f"지원하지 않는 provider: {provider}")
 
-    msg = await llm.ainvoke(
-        [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_content),
-        ]
-    )
-    content = getattr(msg, "content", None)
-    if isinstance(content, list):
-        parts: list[str] = []
-        for block in content:
-            if isinstance(block, dict) and "text" in block:
-                parts.append(str(block["text"]))
-            else:
-                parts.append(str(block))
-        return "".join(parts)
-    return str(content or "")
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=user_content),
+    ]
+
+    ctx = _LLM_STREAM_CTX.get()
+    if ctx:
+        await ctx.runtime.publish(ctx.thread_id, "llm_stream_start", {"agent_id": agent_id})
+
+    parts: list[str] = []
+    async for chunk in llm.astream(messages):
+        delta = _normalize_message_content(getattr(chunk, "content", None))
+        if not delta:
+            continue
+        parts.append(delta)
+        if ctx:
+            full = "".join(parts)
+            await ctx.runtime.publish(
+                ctx.thread_id,
+                "llm_chunk",
+                {
+                    "agent_id": agent_id,
+                    "chunk": delta,
+                    "accumulated_len": len(full),
+                },
+            )
+
+    return "".join(parts)

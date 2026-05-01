@@ -20,6 +20,8 @@ export function App() {
     applyCheckpoint,
     applyInterrupt,
     applyNodeComplete,
+    applyLlmStreamStart,
+    applyLlmChunk,
     projectDirectory,
     setFileSystemSupported,
     setStreamConnected,
@@ -57,6 +59,8 @@ export function App() {
       },
       onInterrupt: applyInterrupt,
       onNodeComplete: applyNodeComplete,
+      onLlmStreamStart: applyLlmStreamStart,
+      onLlmChunk: applyLlmChunk,
       onError: () => setStreamConnected(false),
     });
 
@@ -71,6 +75,8 @@ export function App() {
     applyCheckpoint,
     applyInterrupt,
     applyNodeComplete,
+    applyLlmStreamStart,
+    applyLlmChunk,
     projectDirectory,
     setStreamConnected,
   ]);

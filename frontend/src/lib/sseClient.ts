@@ -1,6 +1,8 @@
 import type {
   CheckpointEventPayload,
   InterruptEventPayload,
+  LlmChunkPayload,
+  LlmStreamStartPayload,
   NodeCompleteEventPayload,
 } from "../types";
 
@@ -10,6 +12,8 @@ interface StreamHandlers {
   onInterrupt: (payload: InterruptEventPayload) => void;
   onNodeComplete: (payload: NodeCompleteEventPayload) => void;
   onCheckpoint: (payload: CheckpointEventPayload) => void;
+  onLlmStreamStart?: (payload: LlmStreamStartPayload) => void;
+  onLlmChunk?: (payload: LlmChunkPayload) => void;
   onError?: (message: string) => void;
 }
 
@@ -30,6 +34,14 @@ export function createSessionStream(threadId: string, handlers: StreamHandlers) 
 
   source.addEventListener("node_complete", (event) => {
     handlers.onNodeComplete(parseJson<NodeCompleteEventPayload>((event as MessageEvent).data));
+  });
+
+  source.addEventListener("llm_stream_start", (event) => {
+    handlers.onLlmStreamStart?.(parseJson<LlmStreamStartPayload>((event as MessageEvent).data));
+  });
+
+  source.addEventListener("llm_chunk", (event) => {
+    handlers.onLlmChunk?.(parseJson<LlmChunkPayload>((event as MessageEvent).data));
   });
 
   source.addEventListener("error", (event) => {
