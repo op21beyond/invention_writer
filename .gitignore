@@ -1,16 +1,25 @@
-# 환경 변수 — 절대 커밋 금지
+# Environment
 .env
 .env.local
 .env.*.local
+backend/.env
 
-# 의존성
+# Dependencies
 node_modules/
+.venv/
+venv/
 
-# 빌드 산출물
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# Build artifacts
 dist/
 build/
 
-# 에디터
+# Editors
 .vscode/settings.json
 .idea/
 
@@ -18,7 +27,11 @@ build/
 .DS_Store
 Thumbs.db
 
-# 로그
+# Logs
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Runtime data
+patent_sessions.db
+backend/patent_sessions.db
