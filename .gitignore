@@ -35,3 +35,7 @@ pnpm-debug.log*
 # Runtime data
 patent_sessions.db
 backend/patent_sessions.db
+
+# Verilog simulation artifacts
+sim/sim.vcd
+sim/sim.vvp
